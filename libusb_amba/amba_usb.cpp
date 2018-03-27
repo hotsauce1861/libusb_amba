@@ -3,7 +3,10 @@
 #include <iostream>
 
 #ifdef WIN32
-
+#include <windows.h>
+#elif
+#include <unistd.h>
+#include <pthread.h>
 #endif
 
 int interface_ref = 0;
@@ -13,6 +16,13 @@ struct libusb_endpoint_descriptor;
 amba_usb::amba_usb()
 {
 
+}
+
+amba_usb::~amba_usb()
+{
+    libusb_close(m_dev_handle);
+    libusb_release_interface(m_dev_handle,0);
+    std::cout << "exit task" << std::endl;
 }
 
 void amba_usb::active_config(struct libusb_device *dev,struct libusb_device_handle *handle)
@@ -68,40 +78,37 @@ void amba_usb::usb_init()
     unsigned char buf[512] = { 0 };
     unsigned char* p_buf = &buf[0];
     memmove(buf + 8,buf,sizeof(cmd_session_start));
-    libusb_device **list;
-    libusb_device *dev;
-    libusb_device_handle *dev_handle;
-    libusb_context *dev_cntx;
+
     int ret, count, length;
 
-    ret = libusb_init(&dev_cntx);
-    libusb_set_debug(dev_cntx,LIBUSB_LOG_LEVEL_DEBUG);
+    ret = libusb_init(&m_dev_cntx);
+    libusb_set_debug(m_dev_cntx,LIBUSB_LOG_LEVEL_DEBUG);
 
     if(ret < 0)
     {
         printf("init usb failed");
         exit(1);
     }
-    count = libusb_get_device_list(NULL,&list);
+    count = libusb_get_device_list(NULL,&m_dev_list);
     if(count < 0){
         printf("get device list failed");
         exit(2);
     }
     for(int i=0; i<count; i++)
     {
-        dev = list[i];
+        m_dev = m_dev_list[i];
 
     }
-    dev_handle = libusb_open_device_with_vid_pid(dev_cntx,0x4255,0x0001);
-    dev = libusb_get_device(dev_handle);
+    m_dev_handle = libusb_open_device_with_vid_pid(m_dev_cntx,0x4255,0x0001);
+    m_dev = libusb_get_device(m_dev_handle);
 #define DISPLAY_DECS
 #ifdef  DISPLAY_DECS
     struct libusb_interface_descriptor i_desc;
     struct libusb_config_descriptor *c_desc;
     struct libusb_device_descriptor d_desc;
 
-    libusb_get_config_descriptor(dev,0,&c_desc);
-    libusb_get_device_descriptor(dev,&d_desc);
+    libusb_get_config_descriptor(m_dev,0,&c_desc);
+    libusb_get_device_descriptor(m_dev,&d_desc);
 
 
     printf("SerialNumber is %d \n", d_desc.iSerialNumber);
@@ -120,8 +127,20 @@ void amba_usb::usb_init()
 
 #endif
 
-    libusb_set_auto_detach_kernel_driver(dev_handle,1);
+   // libusb_set_auto_detach_kernel_driver(dev_handle,1);
+    for (int if_num = 0; if_num < 1; if_num++) {
+          if (libusb_kernel_driver_active(m_dev_handle, if_num)) {
+              libusb_detach_kernel_driver(m_dev_handle, if_num);
+          }
+          ret = libusb_claim_interface(m_dev_handle, if_num);
+          if (ret < 0) {
+              fprintf(stderr, "Error claiming interface: %s\n",
+                      libusb_error_name(ret));
+              exit(1);
+          }
+   }
 
+/*
     if(libusb_kernel_driver_active(dev_handle, 0) == 1)
     {
         printf("\nKernel Driver Active");
@@ -135,14 +154,14 @@ void amba_usb::usb_init()
             return;
         }
     }
-
+*/
     //libusb_claim_interface(dev_handle, 0);
-    libusb_claim_interface(dev_handle, 0);
+    libusb_claim_interface(m_dev_handle, 0);
 
     //active_config(dev,dev_handle);
     Sleep(10000);
 
-    ret = libusb_bulk_transfer(dev_handle,0x82,p_buf,sizeof(buf),&length,1000);
+    ret = libusb_bulk_transfer(m_dev_handle,0x82,p_buf,sizeof(buf),&length,NULL);
 
     printf("length is %d\n",length);
     printf("size of buf is %d\n",sizeof(buf));
@@ -169,20 +188,21 @@ void amba_usb::usb_init()
         case 0://session start
             memmove(buf + 8,buf,sizeof(cmd_session_start));
             p_buf = &buf[0];
-            libusb_bulk_transfer(dev_handle,0x82,buf,sizeof(buf),&length,1000);
+            libusb_bulk_transfer(m_dev_handle,0x82,buf,sizeof(buf),&length,1000);
             break;
         case 1://set
             memmove(buf + 8,buf,sizeof(cmd_get_all_settings));
             p_buf = &buf[0];
-            libusb_bulk_transfer(dev_handle,0x82,buf,sizeof(buf),&length,1000);
+            libusb_bulk_transfer(m_dev_handle,0x82,buf,sizeof(buf),&length,1000);
             break;
         case 2:
             memmove(buf + 8,buf,sizeof(cmd_get_video_res));
             p_buf = &buf[0];
-            libusb_bulk_transfer(dev_handle,0x82,buf,sizeof(buf),&length,1000);
+            libusb_bulk_transfer(m_dev_handle,0x82,buf,sizeof(buf),&length,1000);
         case 10://quit
             break;
 
         }
+        Sleep(1000);
     }
 }
