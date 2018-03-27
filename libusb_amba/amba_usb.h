@@ -2,30 +2,33 @@
 #define AMBA_USB_H
 
 #include "libusb.h"
+#include "amba_param.h"
+#include "amba_pktfmt.h"
 
-#define ENDP_IN     0x01
-#define ENDP_OUT    0x82
+class amba_param;
+class amba_pktfmt;
 
 class amba_usb
 {
 public:
+    #define     BUF_SIZE    1024
     amba_usb();
     ~amba_usb();
-    void                    usb_init();
-    void                    active_config(struct libusb_device *m_dev,struct libusb_device_handle *handle);
-
-    void                    set_vid(int _vid){this->m_vid = _vid;}
-    void                    set_pid(int _pid){this->m_pid = _pid;}
-    int                     get_vid(){return m_vid;}
-    int                     get_pid(){return m_pid;}
-
+    void                    usb_dump();
+    int                     usb_open();
+    int                     usb_sync_send_dat(char *buf, int len);
+    int                     usb_sync_read_dat(char *buf, int len);
+    void                    usb_run();
+    void                    usb_debug(bool _flag){  m_debug_flag = _flag; }
 private:
+    amba_param              m_dev_param;
+    amba_pktfmt             m_dev_pktfmt;
+
     libusb_device           **m_dev_list;
     libusb_device           *m_dev;
     libusb_device_handle    *m_dev_handle;
     libusb_context          *m_dev_cntx;
-    int                     m_vid;
-    int                     m_pid;
+    bool                    m_debug_flag;
 };
 
 #endif // AMBA_USB_H

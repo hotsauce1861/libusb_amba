@@ -9,12 +9,12 @@
 #include <pthread.h>
 #endif
 
-int interface_ref = 0;
-int alt_interface,interface_number;
+char cmd_session_start[] = "{\"msg_id\" : 257, \"token\": 0}";
+char cmd_get_all_settings[] = "{\"msg_id\" : 3, \"token\": 1}";
+char cmd_get_video_res[] = "{\"msg_id\" : 9, \"param\" :\"video_resolution\", \"token\": 1}";
 
-struct libusb_endpoint_descriptor;
-amba_usb::amba_usb()
-    :m_vid(0x4255),m_pid(0x0001)
+
+amba_usb::amba_usb():m_debug_flag(false)
 {
 
 }
@@ -26,113 +26,28 @@ amba_usb::~amba_usb()
     std::cout << "exit task" << std::endl;
 }
 
-void amba_usb::active_config(struct libusb_device *dev,struct libusb_device_handle *handle)
-{
-    struct libusb_device_handle *hDevice_req;
-    struct libusb_config_descriptor *config;
-    struct libusb_endpoint_descriptor *endpoint;
-    int altsetting_index,interface_index=0,ret_active;
-    int i,ret_print;
+void amba_usb::usb_dump()
+{  
 
-    hDevice_req = handle;
-
-    ret_active = libusb_get_active_config_descriptor(dev,&config);
-    //ret_print = print_configuration(hDevice_req,config);
-
-    for(interface_index=0;interface_index<config->bNumInterfaces;interface_index++)
-    {
-        const struct libusb_interface *iface = &config->interface[interface_index];
-        for(altsetting_index=0;altsetting_index<iface->num_altsetting;altsetting_index++)
-        {
-            const struct libusb_interface_descriptor *altsetting = &iface->altsetting[altsetting_index];
-
-            int endpoint_index;
-            for(endpoint_index=0;endpoint_index<altsetting->bNumEndpoints;endpoint_index++)
-            {
-                //struct libusb_endpoint_desriptor *ep = &altsetting->endpoint[endpoint_index];
-                //endpoint = &altsetting->endpoint[endpoint_index];
-                alt_interface = altsetting->bAlternateSetting;
-                interface_number = altsetting->bInterfaceNumber;
-            }
-
-            printf("\nEndPoint Descriptors: ");
-            printf("\n\tSize of EndPoint Descriptor : %d",endpoint->bLength);
-            printf("\n\tType of Descriptor : %d",endpoint->bDescriptorType);
-            printf("\n\tEndpoint Address : 0x0%x",endpoint->bEndpointAddress);
-            printf("\n\tMaximum Packet Size: %x",endpoint->wMaxPacketSize);
-            printf("\n\tAttributes applied to Endpoint: %d",endpoint->bmAttributes);
-            printf("\n\tInterval for Polling for data Tranfer : %d\n",endpoint->bInterval);
-        }
-    }
-    libusb_free_config_descriptor(NULL);
-    //return endpoint;
 }
 
-void amba_usb::usb_init()
+int amba_usb::usb_open()
 {
-    //char buf[] = "{\"msg_id\":3,\"token\":0 }";    
-    char strToDevice[] = "{\"rval\" : 0,\"msg_id\" : 257, \"type\": \"free\", \"param\" : \"1048576, 1048576, 1048576, 1230\"}";
-    char cmd_session_start[] = "{\"msg_id\" : 257, \"token\": 0}";
-    char cmd_get_all_settings[] = "{\"msg_id\" : 3, \"token\": 1}";
-    char cmd_get_video_res[] = "{\"msg_id\" : 9, \"param\" :\"video_resolution\", \"token\": 1}";
-
-    unsigned char buf[512] = { 0 };
-    int pkt_len = 0;
-    unsigned int *p_header = (unsigned int *)&buf[0];
-    unsigned char *p_ctx = &buf[16];
-
-    memcpy(p_ctx ,cmd_session_start,sizeof(cmd_session_start));
-    pkt_len = strlen(cmd_session_start) + 16;
-    int ret, count, length;
-
+    int ret;
     ret = libusb_init(&m_dev_cntx);
-    libusb_set_debug(m_dev_cntx,LIBUSB_LOG_LEVEL_DEBUG);
-
     if(ret < 0)
     {
-        printf("init usb failed");
-        exit(1);
+        return -1;
     }
-    count = libusb_get_device_list(NULL,&m_dev_list);
-    if(count < 0){
-        printf("get device list failed");
-        exit(2);
+    if(m_debug_flag){
+        libusb_set_debug(m_dev_cntx,LIBUSB_LOG_LEVEL_DEBUG);
     }
-    for(int i=0; i<count; i++)
-    {
-        m_dev = m_dev_list[i];
+    m_dev_handle = libusb_open_device_with_vid_pid(m_dev_cntx,
+                                                   m_dev_param.get_vid(),
+                                                   m_dev_param.get_pid());
 
-    }
-    m_dev_handle = libusb_open_device_with_vid_pid(m_dev_cntx,0x4255,0x0001);
     m_dev = libusb_get_device(m_dev_handle);
-#define DISPLAY_DECS
-#ifdef  DISPLAY_DECS
-    struct libusb_interface_descriptor i_desc;
-    struct libusb_config_descriptor *c_desc;
-    struct libusb_device_descriptor d_desc;
-
-    libusb_get_config_descriptor(m_dev,0,&c_desc);
-    libusb_get_device_descriptor(m_dev,&d_desc);
-
-
-    printf("SerialNumber is %d \n", d_desc.iSerialNumber);
-    printf("%04x:%04x\n", d_desc.idVendor,d_desc.idProduct);
-    printf("\nDevice Descriptors: ");
-    printf("\n\tSerial Number : %x",d_desc.iSerialNumber);
-    printf("\n\tSize of Device Descriptor : %d",d_desc.bLength);
-    printf("\n\tType of Descriptor : %d",d_desc.bDescriptorType);
-    printf("\n\tUSB Specification Release Number : %d",d_desc.bcdUSB);
-    printf("\n\tDevice Release Number : %d",d_desc.bcdDevice);
-    printf("\n\tDevice Class : %d",d_desc.bDeviceClass);
-    printf("\n\tDevice Sub-Class : %d",d_desc.bDeviceSubClass);
-    printf("\n\tDevice Protocol : %d",d_desc.bDeviceProtocol);
-    printf("\n\tMax. Packet Size : %d",d_desc.bMaxPacketSize0);
-    printf("\n\tNo. of Configuraions : %d\n",d_desc.bNumConfigurations);
-
-#endif
-
-   // libusb_set_auto_detach_kernel_driver(dev_handle,1);
-
+    ///interface number meaning?
     if(libusb_kernel_driver_active(m_dev_handle, 0) == 1)
     {
         printf("\nKernel Driver Active");
@@ -143,56 +58,43 @@ void amba_usb::usb_init()
             printf("\nCouldn't detach kernel driver!\n");
             //libusb_free_device_list(devs,1);
             libusb_close(m_dev_handle);
-            return;
+            return -1;
         }
     }
+
     libusb_claim_interface(m_dev_handle, 0);
 
-    //active_config(dev,dev_handle);
-    Sleep(10000);
-    ret = libusb_bulk_transfer(m_dev_handle, ENDP_IN, buf, pkt_len, &length, 1000);
-    //ret = libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,NULL);
+    return 0;
+}
 
-    printf("length is %d\n",length);
-    printf("size of buf is %d\n",sizeof(buf));
+int amba_usb::usb_sync_send_dat(char *buf, int len)
+{
+    int ret,act_len,head_size;
+    head_size = m_dev_pktfmt.get_header_size();
+    char tmp_buf[BUF_SIZE] = {0};
+    memcpy(tmp_buf + head_size, buf, len);
+    ret = libusb_bulk_transfer(m_dev_handle,m_dev_param.get_endpoint_out(),
+                               (unsigned char *)tmp_buf,
+                               len + head_size,
+                               &act_len,
+                               NULL);
+}
 
-    if(ret == 0 && length == sizeof(buf)){
-        printf("bulk transfer success\n");
-    }else{
-        printf("bulk transfer failed\n");
-    }
+int amba_usb::usb_sync_read_dat(char *buf, int len)
+{
+    int ret,act_len;
+    ret = libusb_bulk_transfer(m_dev_handle,m_dev_param.get_endpoint_in(),
+                               (unsigned char*)buf,
+                               len,
+                               &act_len,
+                               NULL);
+}
 
-    while (1)
-    {
-        int input = 0;
-
-        printf("Command List:\n");
-        printf("0.session start\n");
-        printf("1.get all setting\n");
-        printf("2.get video res\n");
-
-        scanf("%d", &input);
-
-        switch (input)
-        {
-        case 0://session start
-            memmove(buf + 8,buf,sizeof(cmd_session_start));
-            //p_buf = &buf[0];
-            libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,1000);
-            break;
-        case 1://set
-            memmove(buf + 8,buf,sizeof(cmd_get_all_settings));
-            //p_buf = &buf[0];
-            libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,1000);
-            break;
-        case 2:
-            memmove(buf + 8,buf,sizeof(cmd_get_video_res));
-            //_buf = &buf[0];
-            libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,1000);
-        case 10://quit
-            break;
-
-        }
-        Sleep(1000);
-    }
+void amba_usb::usb_run()
+{
+    char buf[BUF_SIZE] = { 0 };
+    usb_open();
+    usb_sync_send_dat(cmd_session_start,strlen(cmd_session_start));
+    usb_sync_read_dat(buf,BUF_SIZE);
+    printf("\nReceive buf %s", buf);
 }
