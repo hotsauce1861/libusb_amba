@@ -3,6 +3,11 @@ CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
+TARGET = run
+
+DESTDIR += $$PWD/../build
+MOC_DIR += $$PWD/../moc
+
 SOURCES += main.cpp \
     amba_usb.cpp
 

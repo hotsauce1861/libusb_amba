@@ -1,7 +1,6 @@
 ﻿#include "amba_usb.h"
 #include <stdio.h>
 #include <iostream>
-#include <pthread.h>
 
 #ifdef WIN32
 
