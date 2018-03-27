@@ -82,12 +82,15 @@ int amba_usb::usb_sync_send_dat(char *buf, int len)
 
 int amba_usb::usb_sync_read_dat(char *buf, int len)
 {
-    int ret,act_len;
+    char tmp_buf[BUF_SIZE] = { 0 };
+    int ret,act_len,head_size;
+    head_size = m_dev_pktfmt.get_header_size();
     ret = libusb_bulk_transfer(m_dev_handle,m_dev_param.get_endpoint_in(),
-                               (unsigned char*)buf,
-                               len,
+                               (unsigned char*)tmp_buf,
+                               len + head_size,
                                &act_len,
                                NULL);
+    memcpy(buf, tmp_buf + head_size, act_len - head_size);
 }
 
 void amba_usb::usb_run()
@@ -96,5 +99,5 @@ void amba_usb::usb_run()
     usb_open();
     usb_sync_send_dat(cmd_session_start,strlen(cmd_session_start));
     usb_sync_read_dat(buf,BUF_SIZE);
-    printf("\nReceive buf %s", buf);
+    printf("\nReceive buf %s \n", buf);
 }
