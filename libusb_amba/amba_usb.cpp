@@ -14,6 +14,7 @@ int alt_interface,interface_number;
 
 struct libusb_endpoint_descriptor;
 amba_usb::amba_usb()
+    :m_vid(0x4255),m_pid(0x0001)
 {
 
 }
@@ -76,9 +77,12 @@ void amba_usb::usb_init()
     char cmd_get_video_res[] = "{\"msg_id\" : 9, \"param\" :\"video_resolution\", \"token\": 1}";
 
     unsigned char buf[512] = { 0 };
-    unsigned char* p_buf = &buf[0];
-    memmove(buf + 8,buf,sizeof(cmd_session_start));
+    int pkt_len = 0;
+    unsigned int *p_header = (unsigned int *)&buf[0];
+    unsigned char *p_ctx = &buf[16];
 
+    memcpy(p_ctx ,cmd_session_start,sizeof(cmd_session_start));
+    pkt_len = strlen(cmd_session_start) + 16;
     int ret, count, length;
 
     ret = libusb_init(&m_dev_cntx);
@@ -128,40 +132,26 @@ void amba_usb::usb_init()
 #endif
 
    // libusb_set_auto_detach_kernel_driver(dev_handle,1);
-    for (int if_num = 0; if_num < 1; if_num++) {
-          if (libusb_kernel_driver_active(m_dev_handle, if_num)) {
-              libusb_detach_kernel_driver(m_dev_handle, if_num);
-          }
-          ret = libusb_claim_interface(m_dev_handle, if_num);
-          if (ret < 0) {
-              fprintf(stderr, "Error claiming interface: %s\n",
-                      libusb_error_name(ret));
-              exit(1);
-          }
-   }
 
-/*
-    if(libusb_kernel_driver_active(dev_handle, 0) == 1)
+    if(libusb_kernel_driver_active(m_dev_handle, 0) == 1)
     {
         printf("\nKernel Driver Active");
-        if(libusb_detach_kernel_driver(dev_handle, 0) == 0)
+        if(libusb_detach_kernel_driver(m_dev_handle, 0) == 0)
             printf("\nKernel Driver Detached!");
         else
         {
             printf("\nCouldn't detach kernel driver!\n");
             //libusb_free_device_list(devs,1);
-            libusb_close(dev_handle);
+            libusb_close(m_dev_handle);
             return;
         }
     }
-*/
-    //libusb_claim_interface(dev_handle, 0);
     libusb_claim_interface(m_dev_handle, 0);
 
     //active_config(dev,dev_handle);
     Sleep(10000);
-
-    ret = libusb_bulk_transfer(m_dev_handle,0x82,p_buf,sizeof(buf),&length,NULL);
+    ret = libusb_bulk_transfer(m_dev_handle, ENDP_IN, buf, pkt_len, &length, 1000);
+    //ret = libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,NULL);
 
     printf("length is %d\n",length);
     printf("size of buf is %d\n",sizeof(buf));
@@ -187,18 +177,18 @@ void amba_usb::usb_init()
         {
         case 0://session start
             memmove(buf + 8,buf,sizeof(cmd_session_start));
-            p_buf = &buf[0];
-            libusb_bulk_transfer(m_dev_handle,0x82,buf,sizeof(buf),&length,1000);
+            //p_buf = &buf[0];
+            libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,1000);
             break;
         case 1://set
             memmove(buf + 8,buf,sizeof(cmd_get_all_settings));
-            p_buf = &buf[0];
-            libusb_bulk_transfer(m_dev_handle,0x82,buf,sizeof(buf),&length,1000);
+            //p_buf = &buf[0];
+            libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,1000);
             break;
         case 2:
             memmove(buf + 8,buf,sizeof(cmd_get_video_res));
-            p_buf = &buf[0];
-            libusb_bulk_transfer(m_dev_handle,0x82,buf,sizeof(buf),&length,1000);
+            //_buf = &buf[0];
+            libusb_bulk_transfer(m_dev_handle,ENDP_IN,buf,sizeof(buf),&length,1000);
         case 10://quit
             break;
 

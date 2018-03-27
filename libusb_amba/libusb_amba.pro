@@ -5,11 +5,12 @@ CONFIG -= qt
 
 TARGET = run
 
-DESTDIR += $$PWD/../build
-MOC_DIR += $$PWD/../moc
+DESTDIR = $$PWD/build/bin
+MOC_DIR = $$PWD/build/moc
 
 SOURCES += main.cpp \
-    amba_usb.cpp
+    amba_usb.cpp \
+    amba_param.cpp
 
 INCLUDEPATH += $$PWD/../lib/include/libusb-1.0
 
@@ -20,5 +21,6 @@ LIBS += -L$$PWD/../lib/MinGW32/dll/ \
 message("include path is $$INCLUDEPATH")
 
 HEADERS += \
-    amba_usb.h
+    amba_usb.h \
+    amba_param.h
 
