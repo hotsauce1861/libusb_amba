@@ -18,6 +18,8 @@ public:
     int                     usb_open();
     int                     usb_sync_send_dat(char *buf, int len);
     int                     usb_sync_read_dat(char *buf, int len);
+    int                     usb_async_send_dat(char *buf, int len);
+    int                     usb_async_read_dat(char *buf, int len);
     void                    usb_run();
     void                    usb_debug(bool _flag){  m_debug_flag = _flag; }
 private:
@@ -28,6 +30,9 @@ private:
     libusb_device           *m_dev;
     libusb_device_handle    *m_dev_handle;
     libusb_context          *m_dev_cntx;
+    libusb_pollfd           *m_dev_fd;
+    libusb_pollfd           **m_dev_fd_list;
+
     bool                    m_debug_flag;
 };
 

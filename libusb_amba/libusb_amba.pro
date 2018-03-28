@@ -16,7 +16,7 @@ SOURCES += main.cpp \
 INCLUDEPATH += $$PWD/../lib/include/libusb-1.0
 
 LIBS += -L$$PWD/../lib/MinGW32/dll/ \
-        -llibusb-1.0
+        -lusb-1.0
 
 
 message("include path is $$INCLUDEPATH")

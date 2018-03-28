@@ -1,5 +1,6 @@
 ﻿#include <iostream>
 #include <amba_usb.h>
+#include <poll.h>
 
 using namespace std;
 

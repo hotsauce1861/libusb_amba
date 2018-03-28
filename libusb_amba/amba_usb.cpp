@@ -1,12 +1,15 @@
 ﻿#include "amba_usb.h"
 #include <stdio.h>
+#include <string.h>
 #include <iostream>
+
 
 #ifdef WIN32
 #include <windows.h>
-#elif
+#else
 #include <unistd.h>
 #include <pthread.h>
+#include <poll.h>
 #endif
 
 char cmd_session_start[] = "{\"msg_id\" : 257, \"token\": 0}";
@@ -95,9 +98,27 @@ int amba_usb::usb_sync_read_dat(char *buf, int len)
 
 void amba_usb::usb_run()
 {
+    int ret;
     char buf[BUF_SIZE] = { 0 };
     usb_open();
+
+    struct pollfd pollfd_array[20];
+    m_dev_fd_list = libusb_get_pollfds(m_dev_cntx);
+
+    for(int i=0; m_dev_fd_list[i]; i++){
+        pollfd_array[i].fd = m_dev_fd_list[i]->fd;
+        pollfd_array[i].events = m_dev_fd_list[i]->events;
+    }
+    ret = poll(pollfd_array,i,5000);
+
+    if(ret > 0)
+    {
+        usb_sync_read_dat(buf,BUF_SIZE);
+
+    }else{
+
+    }
     usb_sync_send_dat(cmd_session_start,strlen(cmd_session_start));
-    usb_sync_read_dat(buf,BUF_SIZE);
+
     printf("\nReceive buf %s \n", buf);
 }
