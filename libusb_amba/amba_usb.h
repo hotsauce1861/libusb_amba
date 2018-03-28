@@ -20,8 +20,13 @@ public:
     int                     usb_sync_read_dat(char *buf, int len);
     int                     usb_async_send_dat(char *buf, int len);
     int                     usb_async_read_dat(char *buf, int len);
+    void                    usb_set_async_mode();
+    void                    usb_set_sync_mode();
     void                    usb_run();
     void                    usb_debug(bool _flag){  m_debug_flag = _flag; }
+    void                    set_snd_cb_fn(libusb_transfer_cb_fn tmp_cb_fn);
+    void                    set_rcv_cb_fn(libusb_transfer_cb_fn tmp_cb_fn);
+
 private:
     amba_param              m_dev_param;
     amba_pktfmt             m_dev_pktfmt;
@@ -32,6 +37,9 @@ private:
     libusb_context          *m_dev_cntx;
     libusb_pollfd           *m_dev_fd;
     libusb_pollfd           **m_dev_fd_list;
+    libusb_transfer         *m_dev_transfer;
+    libusb_transfer_cb_fn   m_dev_snd_cb_fn;
+    libusb_transfer_cb_fn   m_dev_rcv_cb_fn;
 
     bool                    m_debug_flag;
 };
