@@ -9,7 +9,7 @@
 #else
 #include <unistd.h>
 #include <pthread.h>
-#include <sys/poll.h>
+#include <poll.h>
 #endif
 
 char buf[BUF_SIZE] = { 0 };
@@ -24,7 +24,7 @@ static void LIBUSB_CALL recv_cb_fn(struct libusb_transfer *transfer)
     {
         printf("\nLIBUSB_TRANSFER_COMPLETED");
     }
-    printf("\nReceive Callback %s", buf);
+    printf("\nReceive Callback , Data is %s", buf+16);
 
 }
 
@@ -133,7 +133,7 @@ int amba_usb::usb_async_read_dat(char *buf, int len)
 
     libusb_fill_bulk_transfer(m_dev_transfer_recv,m_dev_handle,
                                    m_dev_param.get_endpoint_in(),
-                                   (unsigned char*)tmp_buf,
+                                   (unsigned char*)buf,
                                    len + head_size,
                                    m_dev_rcv_cb_fn,NULL,0);
     m_dev_transfer_recv->flags |= LIBUSB_TRANSFER_FREE_TRANSFER;
@@ -173,7 +173,7 @@ void amba_usb::usb_run()
 
     usb_open();
 
-    struct pollfd pollfd_array[3];
+    struct pollfd pollfd_array[4];
     m_dev_fd_list = (libusb_pollfd**)libusb_get_pollfds(m_dev_cntx);
 
     for(i=0; m_dev_fd_list[i]!=NULL; i++){
@@ -198,7 +198,7 @@ void amba_usb::usb_run()
             libusb_handle_events_timeout(m_dev_cntx,&tv);
             for(int j = 0; j<i; j++){
                 if(pollfd_array[j].fd < 0){
-                    continue;
+                    //continue;
                 }
                 if(pollfd_array[j].revents & POLLIN){
 
@@ -211,6 +211,11 @@ void amba_usb::usb_run()
                 }
             }
         }
+/*
+        usb_async_read_dat(buf,BUF_SIZE);
+        printf("\nReceive buf %s", buf);
+        sleep(1);
+*/
     }
 }
 
