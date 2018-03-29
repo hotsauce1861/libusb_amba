@@ -26,6 +26,8 @@ public:
     void                    usb_debug(bool _flag){  m_debug_flag = _flag; }
     void                    set_snd_cb_fn(libusb_transfer_cb_fn tmp_cb_fn);
     void                    set_rcv_cb_fn(libusb_transfer_cb_fn tmp_cb_fn);
+    void                    usb_opt_user_input();
+
 
 private:
     amba_param              m_dev_param;
@@ -38,6 +40,8 @@ private:
     libusb_pollfd           *m_dev_fd;
     libusb_pollfd           **m_dev_fd_list;
     libusb_transfer         *m_dev_transfer;
+    libusb_transfer         *m_dev_transfer_recv;
+
     libusb_transfer_cb_fn   m_dev_snd_cb_fn;
     libusb_transfer_cb_fn   m_dev_rcv_cb_fn;
 
